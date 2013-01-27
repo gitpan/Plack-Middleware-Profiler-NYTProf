@@ -19,7 +19,7 @@ use Time::HiRes;
 
 use constant PROFILE_ID => 'psgix.profiler.nytprof.reqid';
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 sub prepare_app {
     my $self = shift;
@@ -200,7 +200,6 @@ default
 
     sub { 1 }
 
-This option can receive both scalar and code reference.
 Use code reference if you want to enable profiling programmably 
 This option is optional.
 
