@@ -19,7 +19,7 @@ use Time::HiRes;
 
 use constant PROFILE_ID => 'psgix.profiler.nytprof.reqid';
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 sub prepare_app {
     my $self = shift;
@@ -30,13 +30,6 @@ sub prepare_app {
     $self->_setup_enable_profile;
     $self->_setup_enable_reporting;
     $self->_setup_report_dir;
-    $self->_setup_profiler if $self->enable_profile->();
-}
-
-sub _setup_profiler {
-    my $self = shift;
-    $ENV{NYTPROF} = $self->env_nytprof || 'start=no';
-    require Devel::NYTProf;
 }
 
 sub _setup_profiling_file_paths {
@@ -48,7 +41,7 @@ sub _setup_profiling_file_paths {
 
 sub _setup_enable_reporting {
     my $self = shift;
-    $self->enable_reporting(1) unless $self->enable_reporting;
+    $self->enable_reporting(1) unless defined $self->enable_reporting;
 }
 
 sub _setup_enable_profile {
@@ -64,7 +57,8 @@ sub _setup_profiling_result_dir {
 
 sub _setup_report_dir {
     my $self = shift;
-    $self->report_dir( sub {'report'} ) unless is_code_ref( $self->report_dir );
+    $self->report_dir( sub {'report'} )
+        unless is_code_ref( $self->report_dir );
 }
 
 sub _setup_profile_id {
@@ -96,23 +90,36 @@ sub _setup_profiling_hooks {
 
 }
 
+my %PROFILER_SETUPED;
+
 sub call {
     my ( $self, $env ) = @_;
 
-    if ( $self->enable_profile->( $self, $env ) ) {
+    $self->_setup_profiler unless $PROFILER_SETUPED{$$};
+
+    if ( $self->enable_profile->($env) ) {
         $self->before_profile->( $self, $env );
         $self->start_profiling($env);
     }
 
     my $res = $self->app->($env);
 
-    if ( $self->enable_profile->( $self, $env ) ) {
+    if ( $self->enable_profile->($env) ) {
         $self->stop_profiling($env);
         $self->report($env) if $self->enable_reporting;
         $self->after_profile->( $self, $env );
     }
 
     $res;
+}
+
+sub _setup_profiler {
+    my $self = shift;
+
+    $ENV{NYTPROF} = $self->env_nytprof || 'start=no';
+    require Devel::NYTProf;
+    DB::disable_profile();
+    $PROFILER_SETUPED{$$} = 1;
 }
 
 sub start_profiling {
@@ -135,7 +142,7 @@ sub report {
     DB::disable_profile();
 
     system "nytprofhtml", "-f", $self->profiling_result_file_path($env),
-    '-o', $self->report_dir->();
+        '-o', $self->report_dir->();
 }
 
 sub profiling_result_file_path {
@@ -160,7 +167,7 @@ sub is_code_ref {
 }
 
 sub DESTROY {
-    DB::finish_profile();
+    DB::finish_profile() if defined &{"DB::finish_profile"};
 }
 
 1;
@@ -186,6 +193,12 @@ Plack::Middleware::Profiler::NYTProf - Middleware for Profiling a Plack App
 =head1 DESCRIPTION
 
 Plack::Middleware::Profiler::NYTProf helps you to get profiles of Plack App.
+
+Enabling this middleware will result in a huge performance penalty.
+It is intended for use in development only.
+
+Read L<Devel::NYTProf> documentation if you use it for production.
+Some options of Devel::NYTProf is useful to reduce profling overhead.
 
 =head1 OPTIONS
 

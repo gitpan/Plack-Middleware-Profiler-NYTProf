@@ -2,6 +2,7 @@
 Changes
 examples/app.psgi
 examples/app_options.psgi
+examples/app_report.psgi
 inc/Module/Install.pm
 inc/Module/Install/AuthorTests.pm
 inc/Module/Install/Base.pm
@@ -26,3 +27,4 @@ MANIFEST			This list of files
 META.yml
 README
 t/00_load_all.t
+t/01_profile.t
