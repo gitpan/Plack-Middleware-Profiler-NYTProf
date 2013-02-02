@@ -19,7 +19,7 @@ use Time::HiRes;
 
 use constant PROFILE_ID => 'psgix.profiler.nytprof.reqid';
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 sub prepare_app {
     my $self = shift;
@@ -97,14 +97,15 @@ sub call {
 
     $self->_setup_profiler unless $PROFILER_SETUPED{$$};
 
-    if ( $self->enable_profile->($env) ) {
+    my $is_profiler_enabled =  $self->enable_profile->($env); 
+    if ( $is_profiler_enabled ) {
         $self->before_profile->( $self, $env );
         $self->start_profiling($env);
     }
 
     my $res = $self->app->($env);
 
-    if ( $self->enable_profile->($env) ) {
+    if ( $is_profiler_enabled ) {
         $self->stop_profiling($env);
         $self->report($env) if $self->enable_reporting;
         $self->after_profile->( $self, $env );
@@ -117,6 +118,9 @@ sub _setup_profiler {
     my $self = shift;
 
     $ENV{NYTPROF} = $self->env_nytprof || 'start=no';
+    
+    # NYTPROF environment variable is set in Devel::NYTProf::Core
+    # so, we load Devel::NYTProf here.
     require Devel::NYTProf;
     DB::disable_profile();
     $PROFILER_SETUPED{$$} = 1;
@@ -199,6 +203,7 @@ It is intended for use in development only.
 
 Read L<Devel::NYTProf> documentation if you use it for production.
 Some options of Devel::NYTProf is useful to reduce profling overhead.
+See MAKING_NYTPROF_FASTER section of NYTProf's pod.
 
 =head1 OPTIONS
 
@@ -299,6 +304,8 @@ Takatoshi Kitano E<lt>kitano.tk {at} gmail.comE<gt>
 Dai Okabayashi
 
 =head1 SEE ALSO
+
+L<Devel::NYTProf> 
 
 =head1 LICENSE
 
