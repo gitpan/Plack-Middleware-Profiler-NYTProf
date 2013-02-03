@@ -4,20 +4,28 @@ use Test::More;
 use Plack::Test;
 use Plack::Builder;
 use HTTP::Request::Common;
+use t::Util;
 
-my $app = sub {
-    my $env = shift;
-    return [ '200', [ 'Content-Type' => 'text/plain' ], ["Hello World"] ];
+subtest 'is profiling result created' => sub {
+    my $app = Plack::Middleware::Profiler::NYTProf->wrap( simple_app(),
+        enable_reporting => 0, );
+
+    test_psgi $app, sub {
+        my $cb  = shift;
+        my $res = $cb->( GET "/" );
+
+        is $res->code, 200, "Response is returned successfully";
+
+        is -e "nytprof.out", 1, "Exists nytprof.out";
+
+        my $regex = qr/nytprof\.\d+\-(\d+)\.\d+\.out/;
+        for my $file ( glob("nytprof.*.out") ) {
+            like $file, $regex, "Exists profiling result file: $file";
+        }
+    };
+
+    unlink glob("nytprof*.out");
+
 };
-$app = Plack::Middleware::Profiler::NYTProf->wrap( $app,
-    enable_reporting => 0 );
-
-test_psgi $app, sub {
-    my $cb  = shift;
-    my $res = $cb->( GET "/" );
-    is $res->code, 200;
-};
-
-unlink glob("nytprof*.out");
 
 done_testing;

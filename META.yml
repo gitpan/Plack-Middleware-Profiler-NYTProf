@@ -25,6 +25,7 @@ requires:
   Filter::Util::Call: 0
   Plack: 0
   Time::HiRes: 0
+  parent: 0
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.06
+version: 0.07

@@ -4,6 +4,9 @@ examples/app.psgi
 examples/app_options.psgi
 examples/app_production.psgi
 examples/app_report.psgi
+inc/Exporter.pm
+inc/File/Spec.pm
+inc/File/Temp.pm
 inc/Module/Install.pm
 inc/Module/Install/AuthorTests.pm
 inc/Module/Install/Base.pm
@@ -20,12 +23,13 @@ inc/Test/Base.pm
 inc/Test/Base/Filter.pm
 inc/Test/Builder.pm
 inc/Test/Builder/Module.pm
-inc/Test/LoadAllModules.pm
 inc/Test/More.pm
 lib/Plack/Middleware/Profiler/NYTProf.pm
 Makefile.PL
 MANIFEST			This list of files
 META.yml
 README
-t/00_load_all.t
+t/00_compile.t
 t/01_profile.t
+t/02_profile_options.t
+t/Util.pm
