@@ -2,7 +2,7 @@ package Plack::Middleware::Profiler::NYTProf;
 use strict;
 use warnings;
 use parent qw(Plack::Middleware);
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 use Plack::Util::Accessor qw(
     enable_profile
@@ -97,15 +97,10 @@ sub call {
     my ( $self, $env ) = @_;
 
     $self->_setup_profiler unless $PROFILER_SETUPED{$$};
-
-    my $is_profiler_enabled = $self->enable_profile->($env);
-    if ($is_profiler_enabled) {
-        $env->{PROFILER_ENABLED} = 1;
-        $self->before_profile->( $self, $env );
-        $self->start_profiling($env);
-    }
+    $self->start_profiling_if_needed($env);
 
     my $res = $self->app->($env);
+
     if ( ref($res) && ref($res) eq 'ARRAY' ) {
         $self->stop_profiling_and_report_if_needed($env);
         return $res;
@@ -125,6 +120,16 @@ sub call {
             }
         }
     );
+}
+
+sub start_profiling_if_needed {
+    my ( $self, $env ) = @_;
+    my $is_profiler_enabled = $self->enable_profile->($env);
+    return unless $is_profiler_enabled;
+
+    $env->{PROFILER_ENABLED} = 1;
+    $self->before_profile->( $self, $env );
+    $self->start_profiling($env);
 }
 
 sub stop_profiling_and_report_if_needed {
