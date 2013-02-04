@@ -2,7 +2,7 @@ package Plack::Middleware::Profiler::NYTProf;
 use strict;
 use warnings;
 use parent qw(Plack::Middleware);
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 use Plack::Util::Accessor qw(
     enable_profile
@@ -20,7 +20,8 @@ use Plack::Util::Accessor qw(
 use File::Spec;
 use Time::HiRes qw(gettimeofday);
 
-use constant PROFILE_ID => 'psgix.profiler.nytprof.reqid';
+use constant PROFILE_ID       => 'psgix.profiler.nytprof.reqid';
+use constant PROFILER_ENABLED => 'psgix.profiler.nytprof.enabled';
 
 sub prepare_app {
     my $self = shift;
@@ -99,19 +100,41 @@ sub call {
 
     my $is_profiler_enabled = $self->enable_profile->($env);
     if ($is_profiler_enabled) {
+        $env->{PROFILER_ENABLED} = 1;
         $self->before_profile->( $self, $env );
         $self->start_profiling($env);
     }
 
     my $res = $self->app->($env);
-
-    if ($is_profiler_enabled) {
-        $self->stop_profiling($env);
-        $self->report($env) if $self->enable_reporting;
-        $self->after_profile->( $self, $env );
+    if ( ref($res) && ref($res) eq 'ARRAY' ) {
+        $self->stop_profiling_and_report_if_needed($env);
+        return $res;
     }
 
-    $res;
+    Plack::Util::response_cb(
+        $res,
+        sub {
+            my $res = shift;
+            sub {
+                my $chunk = shift;
+                if ( !defined $chunk ) {
+                    $self->stop_profiling_and_report_if_needed($env);
+                    return;
+                }
+                return $chunk;
+            }
+        }
+    );
+}
+
+sub stop_profiling_and_report_if_needed {
+    my ( $self, $env ) = @_;
+    my $is_profiler_enabled = $env->{PROFILER_ENABLED};
+    return unless $is_profiler_enabled;
+
+    $self->stop_profiling($env);
+    $self->report($env) if $self->enable_reporting;
+    $self->after_profile->( $self, $env );
 }
 
 sub _setup_profiler {
