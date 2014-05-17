@@ -32,4 +32,5 @@ README
 t/00_compile.t
 t/01_profile.t
 t/02_profile_options.t
+t/03_no_load.t
 t/Util.pm
